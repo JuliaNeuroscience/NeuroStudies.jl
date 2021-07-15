@@ -1,0 +1,13 @@
+name = "NeuroStudies"
+uuid = "80a1f922-8ff7-4b10-86fa-6baadcfd06d1"
+authors = ["Zachary P. Christensen <zchristensen7@gmail.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
