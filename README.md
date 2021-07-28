@@ -4,12 +4,6 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://Tokazama.github.io/NeuroStudies.jl/dev)
 [![Build Status](https://github.com/Tokazama/NeuroStudies.jl/workflows/CI/badge.svg)](https://github.com/Tokazama/NeuroStudies.jl/actions)
 
-```
-NeuroStudy
-`-> DataPath
-    `-> SubjectPath
-    |   `-> SessionPath
-            `-> ModalityPath
-                `-> NeuroPath
-        
-```
+
+Package for organizing neuroscience studies. Design is highly motivated by the [Brain Imaging Data Structure (BIDS) specification](https://github.com/bids-standard/bids-specification).
+
