@@ -1,0 +1,121 @@
+
+## load
+function load(f, ::Type{String}, error_on_missing::Bool=false)
+    if isfile(f)
+        return read(f, String)
+    elseif error_on_missing
+        error("$f is not a file")
+    else
+        return ""
+    end
+end
+function load(f, ::Type{OrderedDict{Symbol,Any}}, error_on_missing::Bool=false)
+    if isfile(f)
+        return OrderedDict{Symbol,Any}(JSON3.read(read(f, String)))
+    elseif error_on_missing
+        error("$f is not a file")
+    else
+        return OrderedDict{Symbol,Any}()
+    end
+end
+function load(f, ::Type{DataFrame}, error_on_missing::Bool=false)
+     if isfile(f)
+        return DataFrame(CSV.File(f, delim="\t"))
+    elseif error_on_missing
+        error("$f is not a file")
+    else
+        return DataFrame()
+    end
+end
+function load(p, ::Type{StudyMetadata})
+    StudyMetadata(
+        load(joinpath(p, "README"), String),
+        load(joinpath(p, "LICENSE"), String),
+        load(joinpath(p, "CHANGES"), String),
+        load(joinpath(p, "dataset_description.json"), DataDescription),
+        Spreadsheet(
+            load(joinpath(p, "participants.json"), OrderedDict{Symbol,Any}),
+            load(joinpath(p, "participants.tsv"), DataFrame)
+        )
+    )
+end
+function load(f, ::Type{DataDescription}, error_on_missing::Bool=false)
+    if isfile(f)
+        d = JSON3.read(read(f, String))
+        return DataDescription(
+            get(d, :Name, ""),
+            get(d, :BIDSVersion, ""),
+            get(d, :HEDVersion, ""),
+            get(d, :License, ""),
+            get(d, :Authors, [""]),
+            get(d, :Acknowledgements, ""),
+            get(d, :HowToAcknowledge, ""),
+            get(d, :Funding, ""),
+            get(d, :EthicsApprovals, [""]),
+            get(d, :ReferencesAndLinks, [""]),
+            get(d, :DatasetDOI, "")
+        )
+    elseif error_on_missing
+        error("$f is not a file")
+    else
+        return DataDescription()
+    end
+end
+
+## save
+function save(f, data::DataDescription)
+    open(f, "w") do io
+        JSON3.pretty(io, OrderedDict{Symbol,Any}(
+            :Name => data.Name,
+            :BIDSVersion => data.BIDSVersion,
+            :HEDVersion => data.HEDVersion.
+            :License => data.License,
+            :Authors => data.Authors,
+            :Acknowledgements => data.Acknowledgements,
+            :HowToAcknowledge => data.HowToAcknowledge,
+            :Funding => data.Funding,
+            :EthicsApprovals => data.EthicsApprovals,
+            :ReferencesAndLinks => data.ReferencesAndLinks,
+            :DatasetDOI => data.DatasetDOI
+        ))
+    end
+end
+save(f, d::AbstractString) = write(f, d)
+save(f, df::DataFrame) = CSV.write(df, delim="\t")
+function save(f, d::OrderedDict{Symbol,Any})
+    open(sf * ".json", "w") do io
+        JSON3.pretty(io, d)
+    end
+end
+function save(p, d::StudyMetadata)
+    save(joinpath(p, "README"), d.README),
+    save(joinpath(p, "LICENSE"), d.LICENSE),
+    save(joinpath(p, "CHANGES"), d.CHANGES),
+    save(joinpath(p, "dataset_description.json"), d.dataset_description),
+    save(joinpath(p, "participants.json"), d.participants.dict)
+    save(joinpath(p, "participants.tsv"), d.participants.data)
+end
+
+## metadata
+Metadata.metadata(p::StudyPath) = load(String(p), StudyMetadata)
+function Metadata.metadata(p::SubjectPath)
+    b = basename(dirname(p)) * "_scans"
+    rp = repath(p)
+    return Spreadsheet(
+        load(joinpath(rp, b * ".json"), OrderedDict{Symbol,Any}),
+        load(joinpath(rp, b * ".tsv"), DataFrame)
+    )
+end
+function Metadata.metadata(p::SessionPath)
+    b = String(basename(dirname(p))) * "_" * String(basename(p)) * "_scans"
+    rp = repath(p)
+    return Spreadsheet(
+        load(joinpath(rp, b * ".json"), OrderedDict{Symbol,Any}),
+        load(joinpath(rp, b * ".tsv"), DataFrame)
+    )
+end
+
+function Metadata.metadata(p::FilePath)
+    load(joinpath(repath(dirname(p)), splitext(basename(p))[1] * ".json"), OrderedDict{Symbol,Any})
+end
+

@@ -7,3 +7,31 @@
 
 Package for organizing neuroscience studies. Design is highly motivated by the [Brain Imaging Data Structure (BIDS) specification](https://github.com/bids-standard/bids-specification).
 
+```julia
+julia> using NeuroStudies
+
+julia> s = study("MyStudy")
+study(MyStudy)
+
+julia> sub = subject("sub-001")
+subject(sub-001)
+
+julia> ses = session("ses-1")
+session(ses-1)
+
+julia> mod = modality("anat")
+modality(anat)
+
+julia> p = joinpath(pwd(), s, sub, ses, mod)
+/Users/zchristensen/projects/NeuroStudies.jl/MyStudy/sub-001/ses-1/anat
+
+julia> d = derived("vbm")
+derived(vbm)
+
+julia> relpath(p, d)
+/Users/zchristensen/projects/NeuroStudies.jl/MyStudy/derivatives/vbm/sub-001/ses-1/anat
+
+```
+
+
+

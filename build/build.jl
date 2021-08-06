@@ -29,10 +29,9 @@ function generate_schemas(m::Vector{String})
     return modalities, entities
 end
 
-function generate_entity_file(modalities, e)
-    io = open("core.jl", "w")
+function generate_entity_file(e)
+    io = open("neuro_entities.jl", "w")
     write(io, "\n")
-    write(io, "module NeuroStudyCore\n\n")
 
     # Create enum for each entity 
     write(io, "@enum Entity::UInt8 begin\n")
@@ -86,57 +85,14 @@ function generate_entity_file(modalities, e)
     write(io, "        error(\"\$(x) cannot be converted to an Entity type.\")\n")
     write(io, "    end\n")
     write(io, "end\n\n")
-    write(io, """
-    struct EntityPair
-        entity::Entity
-        label::String
+    close(io)
+end
 
-        EntityPair(e::Entity, label) = new(e, string(label))
-    end
-    Base.String(x::EntityPair) = String(getfield(x, :entity)) * "-" * getfield(x, :label)
-
-    function entities(; kwargs...)
-        if length(kwargs) === 1
-            return (EntityPair(Entity(first(keys(kwargs))), kwargs[1]),)
-        else
-            return (
-                EntityPair(Entity(first(keys(kwargs))), kwargs[1]),
-                entities(; kwargs[2:end]...)...
-            )
-        end
-    end
-
-    struct FileName
-        entities::Tuple{Vararg{EntityPair}}
-        suffix::String
-    end
-    @inline function Base.String(x::FileName)
-        out = ""
-        for e_i in getfield(x, :entities)
-            out *= String(e_i)
-            out *= "_"
-        end
-        return out * getfield(x, :suffix)
-    end
-
-    @inline function _get_opt(@nospecialize(dst), @nospecialize(src::Tuple{Vararg{EntityPair}}), e::Entity)
-        for src_i in src
-            getfield(src_i, :entity) === e && return (dst..., src_i)
-        end
-        return dst
-    end
-
-    @inline function _get_req(@nospecialize(dst), @nospecialize(src::Tuple{Vararg{EntityPair}}), e::Entity)
-        for src_i in src
-            getfield(src_i, :entity) === e && return (dst..., src_i)
-        end
-        error(String(e) * " is a required entity for the provided suffix.")
-    end\n
-    """)
-
+function generate_data_type_files(modalities, e)
+    io = open("data_type_entities.jl", "w")
     # modalities
     for (m, v) in modalities
-        write(io, "function _$(m)_file(suffix, @nospecialize(src::Tuple{Vararg{EntityPair}}))\n")
+        write(io, "function _$(m)_entities(suffix, src::Entities)\n")
         for i in axes(v, 1)
             ms = v[i]
             if i === 1
@@ -160,20 +116,18 @@ function generate_entity_file(modalities, e)
                     str = "_get_opt($(str), src, $(k))"
                 end
             end
-            write(io, "        return FileName($(str), suffix)\n")
+            write(io, "        return Entities($(str))\n")
         end
         write(io, "    else\n")
         write(io, "        error(suffix * \" is not a supported suffix.\")\n")
         write(io, "    end\n")
         write(io, "end\n\n")
     end
-    write(io, "end")
     close(io)
 end
 
 m, e = generate_schemas(["anat", "beh", "dwi", "eeg", "fmap", "func", "ieeg", "meg", "perf", "pet"]);
 
-generate_entity_file(m, e)
-
-#generate_modality_file(m, e)
+generate_entity_file(e)
+generate_data_type_files(m, e)
 
