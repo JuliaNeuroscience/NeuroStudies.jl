@@ -25,8 +25,8 @@ modality(anat)
 julia> p = joinpath(pwd(), s, sub, ses, mod)
 /Users/zchristensen/projects/NeuroStudies.jl/MyStudy/sub-001/ses-1/anat
 
-julia> d = derived("vbm")
-derived(vbm)
+julia> d = derivative("vbm")
+derivative(vbm)
 
 julia> relpath(p, d)
 /Users/zchristensen/projects/NeuroStudies.jl/MyStudy/derivatives/vbm/sub-001/ses-1/anat

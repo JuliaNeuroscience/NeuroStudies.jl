@@ -16,13 +16,6 @@ include("types.jl")
 include("paths.jl")
 include("utils.jl")
 
-
-struct StudyLayout{D}
-    path::StudyPath{D}
-
-end
-
-
 # include("data_type_entities.jl")
 
 end

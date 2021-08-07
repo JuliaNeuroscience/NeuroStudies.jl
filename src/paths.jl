@@ -26,7 +26,7 @@ Base.basename(p::SubjectPath) = getfield(p, :subject)
 Base.basename(p::SessionPath) = getfield(p, :session)
 Base.basename(p::ModalityPath) = getfield(p, :modality)
 Base.basename(p::FilePath) = getfield(p, :basename)
-Base.basename(p::PipelinePath) = getfield(p, :pipeline)
+Base.basename(p::DerivativePath) = getfield(p, :pipeline)
 
 Base.dirname(p::NeuroPath) = getfield(p, :dirname)
 Base.dirname(p::NeuroPath{Nothing}) = ""
@@ -52,7 +52,7 @@ Base.joinpath(x::AbstractString, y::Study) = StudyPath(x, basename(y))
 Base.joinpath(x::StudyPath, y::Data) = DataPath(x, basename(y))
 Base.joinpath(x::StudyPath, y::Subject) = SubjectPath(x, basename(y))
 Base.joinpath(x::Union{StudyPath,DataPath}, y::Subject) = SubjectPath(x, basename(y))
-Base.joinpath(x::DataPath, y::Pipeline) = PipelinePath(x, basename(y))
+Base.joinpath(x::DataPath, y::Derivative) = DerivativePath(x, basename(y))
 Base.joinpath(x::SubjectPath, y::Session) = SessionPath(x, basename(y))
 Base.joinpath(x::Union{SubjectPath,SessionPath}, y::Modality) = ModalityPath(x, basename(y))
 Base.joinpath(x::NeuroPath, y::File) = FilePath(x, basename(y))
@@ -110,40 +110,16 @@ is_derivative(p::StudyPath) = false
 is_derivative(p::ModalityPath) = basename(p) === "derivatives"
 is_derivative(p::NeuroPath) = is_derivative(dirname(p))
 
-function sesdir(p::Union{StudyPath,ModalityPath,SubjectPath})
-    error("$p does not contain any upstream session directory")
-end
-sesdir(p::NeuroPath) = sesdir(dirname(p))
-sesdir(p::SessionPath) = p
-
-subdir(p::StudyPath) = error("$p does not contain any upstream subject directory")
-subdir(p::NeuroPath) = subdir(dirname(p))
-subdir(p::SubjectPath) = p
-
-function moddir(p::Union{StudyPath,SubjectPath,SessionPath,DataPath})
-    error("$p does not contain any upstream modality directory")
-end
-moddir(p::NeuroPath) = moddir(basename(p))
-modality(p::ModalityPath) = p
-
-studydir(p::StudyPath) = p
-studydir(p::NeuroPath) = studydir(dirname(p))
-
-function pipedir(p::Union{StudyPath,DataPath})
-    error("$p does not contain any upstream pipeline directory")
-end
-pipedir(p::PipelinePath) = p
-pipedir(p::NeuroPath) = pipedir(dirname(p))
-
 """
     session(p::NeuroPath)
     session(s::AbstractString)
 
 Return the session from a `NeuroPath` or compose a new instance of `SessionPath`.
 """
-session(p::NeuroPath) = SessionPath(basename(sesdir(p)))
+session(p::FilePath) = session(dirname(p))
+session(p::ModalityPath) = session(dirname(p))
+session(p::SessionPath) = p
 session(p::AbstractString) = SessionPath(p)
-
 
 """
     subject(p::NeuroPath)
@@ -151,9 +127,11 @@ session(p::AbstractString) = SessionPath(p)
 
 Return the subject from a `NeuroPath` or compose a new instance of `SubjectPath`.
 """
-subject(p::NeuroPath) = SubjectPath(basename(subdir(p)))
+subject(p::FilePath) = subject(dirname(p))
+subject(p::ModalityPath) = subject(dirname(p))
+subject(p::SessionPath) = subject(dirname(p))
+subject(p::SubjectPath) = p
 subject(p::AbstractString) = SubjectPath(p)
-
 
 """
     modality(p::NeuroPath)
@@ -161,8 +139,10 @@ subject(p::AbstractString) = SubjectPath(p)
 
 Return the modality from a `NeuroPath` or compose a new instance of `ModalityPath`.
 """
-modality(p::NeuroPath) = ModalityPath(basename(subdir(p)))
+modality(p::ModalityPath) = p
+modality(p::FilePath) = modality(dirname(p))
 modality(p::AbstractString) = ModalityPath(p)
+
 
 """
     study(p::NeuroPath)
@@ -170,35 +150,37 @@ modality(p::AbstractString) = ModalityPath(p)
 
 Return the study from a `NeuroPath` or compose a new instance of `StudyPath`.
 """
-study(p::NeuroPath) = StudyPath(basename(subdir(p)))
+study(p::StudyPath) = p
+study(p::NeuroPath) = studydir(dirname(p))
 study(p::AbstractString) = StudyPath(p)
+
+"""
+    derivative(p::NeuroPath)
+    derivative(s::AbstractString)
+
+Return the derivative subpath from a `NeuroPath` or compose a new instance of `DerivativePath`.
+"""
+derivative(p::NeuroPath) = derivative(dirname(p))
+derivative(p::DerivativePath) = p
+derivative(p::AbstractString) = DerivativePath(p)
 
 
 file(p::AbstractString) = FilePath(p)
 
-"""
-    derived(p::NeuroPath)
-    derived(s::AbstractString)
-
-Return the study from a `NeuroPath` or compose a new instance of `StudyPath`.
-"""
-derived(p::NeuroPath) = PipelinePath(basename(pipedir(p)))
-derived(p::AbstractString) = PipelinePath(p)
 
 Base.replace(p::SessionPath, s::Session) = SessionPath(dirname(p), basename(s))
 Base.replace(p::ModalityPath, s::Session) = ModalityPath(replace(dirname(p), s), basename(p))
 Base.replace(p::FilePath, s::Session) = FilePath(replace(dirname(p), s), basename(p))
-
-## Pipeline
-function Base.relpath(p::DataPath{StudyPath{D}}, r::Pipeline) where {D}
-    PipelinePath(DataPath(dirname(p), "derivatives"), basename(r))
+## Derivative
+function Base.relpath(p::DataPath{StudyPath{D}}, r::Derivative) where {D}
+    DerivativePath(DataPath(dirname(p), "derivatives"), basename(r))
 end
-function Base.relpath(p::SubjectPath{StudyPath{D}}, r::Pipeline) where {D}
-    SubjectPath(PipelinePath(DataPath(dirname(p), "derivatives"), basename(r)), basename(p))
+function Base.relpath(p::SubjectPath{StudyPath{D}}, r::Derivative) where {D}
+    SubjectPath(DerivativePath(DataPath(dirname(p), "derivatives"), basename(r)), basename(p))
 end
-Base.relpath(p::SessionPath, r::Pipeline) = SessionPath(relpath(dirname(p), r), basename(p))
-Base.relpath(p::ModalityPath, r::Pipeline) = ModalityPath(relpath(dirname(p), r), basename(p))
-Base.relpath(p::FilePath, r::Pipeline) = ModalityPath(relpath(dirname(p), r), basename(p))
+Base.relpath(p::SessionPath, r::Derivative) = SessionPath(relpath(dirname(p), r), basename(p))
+Base.relpath(p::ModalityPath, r::Derivative) = ModalityPath(relpath(dirname(p), r), basename(p))
+Base.relpath(p::FilePath, r::Derivative) = ModalityPath(relpath(dirname(p), r), basename(p))
 
 ## Subject
 Base.relpath(p::SubjectPath, r::Subject) = SubjectPath(dirname(p), basename(r))

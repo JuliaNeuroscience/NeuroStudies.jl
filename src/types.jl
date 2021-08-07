@@ -133,17 +133,17 @@ struct DataPath{D} <: NeuroPath{D}
     DataPath(s) = DataPath(nothing, s)
 end
 
-struct PipelinePath{D} <: NeuroPath{D}
+struct DerivativePath{D} <: NeuroPath{D}
     dirname::D
     pipeline::String
 
-    PipelinePath(::Nothing, s::String) = new{Nothing}(nothing, s)
-    function PipelinePath(d::DataPath, s::String)
+    DerivativePath(::Nothing, s::String) = new{Nothing}(nothing, s)
+    function DerivativePath(d::DataPath, s::String)
         @assert basename(d) === "derivatives"
         return new{typeof(d)}(d, s)
     end
-    PipelinePath(d, s::AbstractString) = PipelinePath(d, String(s))
-    PipelinePath(s) = PipelinePath(nothing, s)
+    DerivativePath(d, s::AbstractString) = DerivativePath(d, String(s))
+    DerivativePath(s) = DerivativePath(nothing, s)
 end
 
 """
@@ -155,8 +155,8 @@ struct SubjectPath{D} <: NeuroPath{D}
     dirname::D
     subject::String
 
-    SubjectPath(d::Union{Nothing,DataPath,StudyPath,PipelinePath}, s::String) = new{typeof(d)}(d, s)
-    SubjectPath(d::Union{Nothing,DataPath,StudyPath,PipelinePath}, s) = SubjectPath(d, String(s))
+    SubjectPath(d::Union{Nothing,DataPath,StudyPath,DerivativePath}, s::String) = new{typeof(d)}(d, s)
+    SubjectPath(d::Union{Nothing,DataPath,StudyPath,DerivativePath}, s) = SubjectPath(d, String(s))
     SubjectPath(s) = SubjectPath(nothing, s)
 end
 
@@ -212,7 +212,7 @@ const Data = DataPath{Nothing}
 
 const Study = StudyPath{Nothing}
 
-const Pipeline = PipelinePath{Nothing}
+const Derivative = DerivativePath{Nothing}
 
 ############
 # Metadata #
@@ -308,7 +308,7 @@ _print_path(p::Study) = "study($(basename(p)))"
 _print_path(p::Session) = "session($(basename(p)))"
 _print_path(p::Subject) = "subject($(basename(p)))"
 _print_path(p::Modality) = "modality($(basename(p)))"
-_print_path(p::Pipeline) = "derived($(basename(p)))"
+_print_path(p::Pipeline) = "derivative($(basename(p)))"
 _print_path(p::File) = "file($(basename(p)))"
 _print_path(p::NeuroPath) = String(p)
 
