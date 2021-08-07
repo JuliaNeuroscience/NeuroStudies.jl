@@ -93,7 +93,6 @@ Base.ispath(p::NeuroPath) = isdir(p)
 Base.ispath(p::FilePath) = isfile(p)
 
 Base.mkdir(p::NeuroPath) = mkdir(repath(p))
-Base.mkpath(p::NeuroPath) = mkpath(repath(p))
 
 Base.touch(p::FilePath) = touch(repath(p))
 Base.cp(x::NeuroPath, y::NeuroPath) = cp(repath(x), repath(y))
@@ -196,4 +195,20 @@ Base.relpath(p::FilePath, r::Session) = FilePath(relpath(dirname(p), r), basenam
 ## Modality
 Base.relpath(p::ModalityPath, r::Modality) = ModalityPath(relpath(dirname(p), r), basename(p))
 Base.relpath(p::FilePath, r::Modality) = ModalityPath(relpath(dirname(p), r), basename(p))
+
+Base.mkpath(p::NeuroPath; mode::Integer = 0o777) = _mkpath(p, mode)
+function _mkpath(x, mode)
+    if !isdir(x)
+        mkdir(x, mode)
+    end
+    return x
+end
+function _mkpath(x::NeuroPath, mode)
+    pd = _mkpath(dirname(x), mode)
+    pp = joinpath(p, basename(x))
+    if !isdir(pp)
+        mkdir(pp, mode)
+    end
+    return pp
+end
 
