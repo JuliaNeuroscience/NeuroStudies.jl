@@ -1,112 +1,37 @@
 
-function _check_modality_name(s::String)
-    if s === "anat"
-        return nothing
-    elseif s === "beh"
-        return nothing
-    elseif s === "dwi"
-        return nothing
-    elseif s === "fmap"
-        return nothing
-    elseif s === "func"
-        return nothing
-    elseif s === "perf"
-        return nothing
-    elseif s === "pet"
-        return nothing
-    elseif s === "eeg"
-        return nothing
-    elseif s === "ieeg"
-        return nothing
-    elseif s === "meg"
-        return nothing
-    else
-        error("$s is not a valid modality directory name.")
-    end
-end
-
-function _check_data_name(s::String)
-    if s === "code"
-        return nothing
-    elseif s === "rawdata"
-        return nothing
-    elseif s === "sourcedata"
-        return nothing
-    elseif s === "stimuli"
-        return nothing
-    elseif s === "derivatives"
-        return nothing
-    elseif s === "phenotype"
-        return nothing
-    else
-        error("$s is not a valid associated data directory name.")
-    end
-end
-
-function _check_entity_name(s::String)
-    if s === "acq"
-        return nothing
-    elseif s === "label"
-        return nothing
-    elseif s === "space"
-        return nothing
-    elseif s === "flip"
-        return nothing
-    elseif s === "rec"
-        return nothing
-    elseif s === "sub"
-        return nothing
-    elseif s === "sample"
-        return nothing
-    elseif s === "proc"
-        return nothing
-    elseif s === "part"
-        return nothing
-    elseif s === "split"
-        return nothing
-    elseif s === "desc"
-        return nothing
-    elseif s === "trc"
-        return nothing
-    elseif s === "recording"
-        return nothing
-    elseif s === "res"
-        return nothing
-    elseif s === "dir"
-        return nothing
-    elseif s === "ses"
-        return nothing
-    elseif s === "task"
-        return nothing
-    elseif s === "mt"
-        return nothing
-    elseif s === "run"
-        return nothing
-    elseif s === "mod"
-        return nothing
-    elseif s === "den"
-        return nothing
-    elseif s === "inv"
-        return nothing
-    elseif s === "ce"
-        return nothing
-    elseif s === "echo"
-        return nothing
-    else
-        error("$s is not an entity.")
-    end
-end
-
 struct Entity
     entity::String
     label::String
 
-    Entity(e::String, l::String) = (_check_entity_name(e); new(e, l))
+    function Entity(e::String, l::String)
+        e, check = _entity_name(e)
+        check || error("$e is not a valid entity.")
+        return new(e, l)
+    end
     Entity(e, l) = Entity(String(e), String(l))
     function Entity(s::AbstractString)
         ss = split(s, "-")
         length(ss) !== 2 && error("$s cannot be parsed to an entity.")
         return Entity(ss[1], ss[2])
+    end
+end
+
+struct EntityBaseName
+    entities::Vector{Entity}
+    suffix::String
+    extension::String
+
+    EntityBaseName(e::Vector{Entity}, s::AbstractString, ex::AbstractString) = new(e, s, ex)
+    function EntityBaseName(s::AbstractString)
+        filename, extension = splitext(s)
+        filename_split = split(filename, "_")
+        N = length(filename_split)
+        # FIXME should probably for no negativity here
+        entities = Vector{Entity}(undef, N-1)
+        @inbounds for i in 1:(N-1)
+            entities[i] = Entity(filename_split[i])
+        end
+        return EntityBaseName(entities, @inbounds(filename_split[end]), extension)
     end
 end
 
@@ -155,8 +80,14 @@ struct SubjectPath{D} <: NeuroPath{D}
     dirname::D
     subject::String
 
-    SubjectPath(d::Union{Nothing,DataPath,StudyPath,DerivativePath}, s::String) = new{typeof(d)}(d, s)
-    SubjectPath(d::Union{Nothing,DataPath,StudyPath,DerivativePath}, s) = SubjectPath(d, String(s))
+    SubjectPath(d::Union{Nothing,StudyPath,DerivativePath}, s::String) = new{typeof(d)}(d, s)
+    function SubjectPath(d::DataPath, s::String)
+        if basename(d) === "derivatives"
+            error("subject paths within the derivative directory must be within a pipeline.")
+        end
+        return new{DataPath}(d, s)
+    end
+    SubjectPath(d, s) = SubjectPath(d, String(s))
     SubjectPath(s) = SubjectPath(nothing, s)
 end
 
@@ -295,7 +226,7 @@ struct GeneratedByInfo
         new(Name, Version, Description, CodeURL, Container)
     end
 end
-
+ 
 struct DerivedMetadata
     GeneratedBy::Vector{GeneratedByInfo}
     SourceDatasets::Vector{SourceInfo}
@@ -308,7 +239,52 @@ _print_path(p::Study) = "study($(basename(p)))"
 _print_path(p::Session) = "session($(basename(p)))"
 _print_path(p::Subject) = "subject($(basename(p)))"
 _print_path(p::Modality) = "modality($(basename(p)))"
-_print_path(p::Pipeline) = "derivative($(basename(p)))"
+_print_path(p::Derivative) = "derivative($(basename(p)))"
 _print_path(p::File) = "file($(basename(p)))"
 _print_path(p::NeuroPath) = String(p)
+
+abstract type PathIndicator end
+
+Base.@kwdef struct ModalityIndicator <: PathIndicator
+    anat::Bool=false
+    beh::Bool=false
+    dwi::Bool=false
+    fmap::Bool=false
+    func::Bool=false
+    perf::Bool=false
+    pet::Bool=false
+    eeg::Bool=false
+    ieeg::Bool=false
+    meg::Bool=false
+end
+
+Base.@kwdef struct DerivativeIndicator <: PathIndicator
+    rawdata::Bool=false
+    sourcedata::Bool=false
+    stimuli::Bool=false
+    derivatives::Bool=false
+    phenotype::Bool=false
+    code::Bool=false
+end
+
+function Base.iterate(x::PathIndicator, state=0)
+    if state === nfields(x)
+        return nothing
+    else
+        next_state = state + 1
+        if getfield(x, next_state)
+            return String(fieldname(typeof(x), next_state)), next_state
+        else
+            return iterate(x, next_state)
+        end
+    end
+end
+
+struct StudyLayout
+    path::StudyPath
+    sessions::Vector{String}
+    subjects::Vector{String}
+    derivatives::DerivativeIndicator
+    modalities::ModalityIndicator
+end
 

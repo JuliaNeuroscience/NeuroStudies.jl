@@ -167,9 +167,6 @@ derivative(p::AbstractString) = DerivativePath(p)
 file(p::AbstractString) = FilePath(p)
 
 
-Base.replace(p::SessionPath, s::Session) = SessionPath(dirname(p), basename(s))
-Base.replace(p::ModalityPath, s::Session) = ModalityPath(replace(dirname(p), s), basename(p))
-Base.replace(p::FilePath, s::Session) = FilePath(replace(dirname(p), s), basename(p))
 ## Derivative
 function Base.relpath(p::DataPath{StudyPath{D}}, r::Derivative) where {D}
     DerivativePath(DataPath(dirname(p), "derivatives"), basename(r))
