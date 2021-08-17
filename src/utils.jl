@@ -43,61 +43,6 @@ function _check_data_name(s::String)
     end
 end
 
-function _entity_name(s::String)
-    if s === "acq"
-        return s, true
-    elseif s === "label"
-        return s, true
-    elseif s === "space"
-        return s, true
-    elseif s === "flip"
-        return s, true
-    elseif s === "rec"
-        return s, true
-    elseif s === "sub"
-        return s, true
-    elseif s === "sample"
-        return s, true
-    elseif s === "proc"
-        return s, true
-    elseif s === "part"
-        return s, true
-    elseif s === "split"
-        return s, true
-    elseif s === "desc"
-        return s, true
-    elseif s === "trc"
-        return s, true
-    elseif s === "recording"
-        return s, true
-    elseif s === "res"
-        return s, true
-    elseif s === "dir"
-        return s, true
-    elseif s === "ses"
-        return s, true
-    elseif s === "task"
-        return s, true
-    elseif s === "mt"
-        return s, true
-    elseif s === "run"
-        return s, true
-    elseif s === "mod"
-        return s, true
-    elseif s === "den"
-        return s, true
-    elseif s === "inv"
-        return s, true
-    elseif s === "ce"
-        return s, true
-    elseif s === "echo"
-        return s, true
-    else
-        return s, false
-    end
-end
-
-
 ## load
 function load(f, ::Type{String}, error_on_missing::Bool=false)
     if isfile(f)

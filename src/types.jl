@@ -1,40 +1,4 @@
 
-struct Entity
-    entity::String
-    label::String
-
-    function Entity(e::String, l::String)
-        e, check = _entity_name(e)
-        check || error("$e is not a valid entity.")
-        return new(e, l)
-    end
-    Entity(e, l) = Entity(String(e), String(l))
-    function Entity(s::AbstractString)
-        ss = split(s, "-")
-        length(ss) !== 2 && error("$s cannot be parsed to an entity.")
-        return Entity(ss[1], ss[2])
-    end
-end
-
-struct EntityBaseName
-    entities::Vector{Entity}
-    suffix::String
-    extension::String
-
-    EntityBaseName(e::Vector{Entity}, s::AbstractString, ex::AbstractString) = new(e, s, ex)
-    function EntityBaseName(s::AbstractString)
-        filename, extension = splitext(s)
-        filename_split = split(filename, "_")
-        N = length(filename_split)
-        # FIXME should probably for no negativity here
-        entities = Vector{Entity}(undef, N-1)
-        @inbounds for i in 1:(N-1)
-            entities[i] = Entity(filename_split[i])
-        end
-        return EntityBaseName(entities, @inbounds(filename_split[end]), extension)
-    end
-end
-
 abstract type NeuroPath{D} end
 
 struct StudyPath{D} <: NeuroPath{D}
@@ -282,9 +246,31 @@ end
 
 struct StudyLayout
     path::StudyPath
-    sessions::Vector{String}
-    subjects::Vector{String}
+    sessions::Vector{Session}
+    subjects::Vector{Subject}
     derivatives::DerivativeIndicator
     modalities::ModalityIndicator
+end
+
+struct PathIterator{D,B}
+    dirname::D
+    basenames::B
+end
+
+@inline function Base.iterate(x::PathIterator)
+    itr = iterate(getfield(x, :basenames))
+    if itr === nothing
+        return nothing
+    else
+        return (joinpath(dirname(x), getfield(itr, 1)), getfield(itr, 2))
+    end
+end
+@inline function Base.iterate(x::PathIterator, state)
+    itr = iterate(getfield(x, :basenames), state)
+    if itr === nothing
+        return nothing
+    else
+        return (joinpath(dirname(x), getfield(itr, 1)), getfield(itr, 2))
+    end
 end
 
