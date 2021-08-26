@@ -1,7 +1,7 @@
 
-abstract type NeuroPath{D} end
+abstract type NeuroPath{D,B} end
 
-struct StudyPath{D} <: NeuroPath{D}
+struct StudyPath{D} <: NeuroPath{D,String}
     dirname::D
     study::String
 
@@ -10,7 +10,7 @@ struct StudyPath{D} <: NeuroPath{D}
     StudyPath(s) = StudyPath(nothing, s)
 end
 
-struct DataPath{D} <: NeuroPath{D}
+struct DataPath{D} <: NeuroPath{D,String}
     dirname::D
     basename::String
 
@@ -22,7 +22,7 @@ struct DataPath{D} <: NeuroPath{D}
     DataPath(s) = DataPath(nothing, s)
 end
 
-struct DerivativePath{D} <: NeuroPath{D}
+struct DerivativePath{D} <: NeuroPath{D,String}
     dirname::D
     pipeline::String
 
@@ -40,7 +40,7 @@ end
 
 Represents a path to data `parent` associated with subject `label`.
 """
-struct SubjectPath{D} <: NeuroPath{D}
+struct SubjectPath{D} <: NeuroPath{D,String}
     dirname::D
     subject::String
 
@@ -60,7 +60,7 @@ end
 
 Represents a path to data `parent` associated with session `label`.
 """
-struct SessionPath{D} <: NeuroPath{D}
+struct SessionPath{D} <: NeuroPath{D,String}
     dirname::D
     session::String
 
@@ -74,7 +74,7 @@ end
 
 Represents a path to a modality directory `m` for a subject path `p`.
 """
-struct ModalityPath{D} <: NeuroPath{D}
+struct ModalityPath{D} <: NeuroPath{D,String}
     dirname::D
     modality::String
 
@@ -86,7 +86,7 @@ struct ModalityPath{D} <: NeuroPath{D}
     ModalityPath(s) = ModalityPath(nothing, s)
 end
 
-struct FilePath{D} <: NeuroPath{D}
+struct FilePath{D} <: NeuroPath{D,String}
     dirname::D
     basename::String
 
@@ -206,71 +206,4 @@ _print_path(p::Modality) = "modality($(basename(p)))"
 _print_path(p::Derivative) = "derivative($(basename(p)))"
 _print_path(p::File) = "file($(basename(p)))"
 _print_path(p::NeuroPath) = String(p)
-
-abstract type PathIndicator end
-
-Base.@kwdef struct ModalityIndicator <: PathIndicator
-    anat::Bool=false
-    beh::Bool=false
-    dwi::Bool=false
-    fmap::Bool=false
-    func::Bool=false
-    perf::Bool=false
-    pet::Bool=false
-    eeg::Bool=false
-    ieeg::Bool=false
-    meg::Bool=false
-end
-
-Base.@kwdef struct DerivativeIndicator <: PathIndicator
-    rawdata::Bool=false
-    sourcedata::Bool=false
-    stimuli::Bool=false
-    derivatives::Bool=false
-    phenotype::Bool=false
-    code::Bool=false
-end
-
-function Base.iterate(x::PathIndicator, state=0)
-    if state === nfields(x)
-        return nothing
-    else
-        next_state = state + 1
-        if getfield(x, next_state)
-            return String(fieldname(typeof(x), next_state)), next_state
-        else
-            return iterate(x, next_state)
-        end
-    end
-end
-
-struct StudyLayout
-    path::StudyPath
-    sessions::Vector{Session}
-    subjects::Vector{Subject}
-    derivatives::DerivativeIndicator
-    modalities::ModalityIndicator
-end
-
-struct PathIterator{D,B}
-    dirname::D
-    basenames::B
-end
-
-@inline function Base.iterate(x::PathIterator)
-    itr = iterate(getfield(x, :basenames))
-    if itr === nothing
-        return nothing
-    else
-        return (joinpath(dirname(x), getfield(itr, 1)), getfield(itr, 2))
-    end
-end
-@inline function Base.iterate(x::PathIterator, state)
-    itr = iterate(getfield(x, :basenames), state)
-    if itr === nothing
-        return nothing
-    else
-        return (joinpath(dirname(x), getfield(itr, 1)), getfield(itr, 2))
-    end
-end
 

@@ -30,7 +30,7 @@ Base.basename(p::DerivativePath) = getfield(p, :pipeline)
 
 Base.dirname(p::NeuroPath) = getfield(p, :dirname)
 Base.dirname(p::NeuroPath{Nothing}) = ""
-Base.dirname(p::PathIterator) = getfield(p, :dirname)
+Base.dirname(p::PathVector) = getfield(p, :dirname)
 
 Base.splitpath(p::StudyPath) = (dirname(p), Study(basename(p)))
 Base.splitpath(p::Study) = (p,)
@@ -49,6 +49,7 @@ Base.splitpath(p::Modality) = (p,)
 
 Base.joinpath(x::AbstractString, y::Study, z...) = joinpath(joinpath(x, y), z...)
 Base.joinpath(x::NeuroPath, y, z...) = joinpath(joinpath(x, y), z...)
+Base.joinpath(x::NeuroPath, y::AbstractVector{NeuroPath}) = PathVector(x, y)
 Base.joinpath(x::AbstractString, y::Study) = StudyPath(x, basename(y))
 Base.joinpath(x::StudyPath, y::Data) = DataPath(x, basename(y))
 Base.joinpath(x::StudyPath, y::Subject) = SubjectPath(x, basename(y))
@@ -209,26 +210,4 @@ function _mkpath(x::NeuroPath, mode)
     end
     return pp
 end
-
-## subpaths
-
-"""
-    subpaths(lyt;:StudyLayout)
-
-Returns an iterator over the raw data subject paths.
-"""
-function subpaths(lyt::StudyLayout)
-    if getfield(getfield(lyt, :derivatives), :rawdata)
-        return subpaths(DataPath(getfield(lyt, :path), "rawdata"), getfield(lyt, :subjects))
-    else # if rawdata isn't explicitly included we assume subjects are in study path's home
-        return subpaths(getfield(lyt, :path), getfield(lyt, :subjects))
-    end
-end
-
-"""
-    subpaths(common_dirname, subjects::AbstractVector{Subject})
-
-Returns an iterator where each value has `common_dirname` joined to the subject name.
-"""
-subpaths(path, subjects::AbstractVector{Subject}) = SubjectIterator(path, subjects)
 
